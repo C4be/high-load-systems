@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bober
+      POSTGRES_PASSWORD: bober_kurwa
+      POSTGRES_DB: bober_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 15s   # Проверять каждые 10 секунд
+      timeout: 5s     # Считать проверку неудачной через 5 секунд
+      retries: 5
