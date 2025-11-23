@@ -5,3 +5,5 @@ pgdata
 clickhouse_data
 .ipynb_checkpoints
 *.zip
+*code-workspace
+spark-warehouse
