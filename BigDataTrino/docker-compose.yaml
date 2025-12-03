@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:16
+    container_name: pg_service
+    environment:
+     POSTGRES_USER: bober
+     POSTGRES_PASSWORD: bober_kurwa
+     POSTGRES_DB: bober_db
+     PGDATA: "/var/lib/postgresql/data/pgdata"
+    healthcheck:
+     test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+     interval: 5s
+     timeout: 5s
+     retries: 5
+    volumes:
+     - ./mounts/pg:/var/lib/postgresql/data
+     - ./src/postgres/init_scripts:/docker-entrypoint-initdb.d
+     - ./materials/mock_data:/tmp/data
+    ports:
+     - 5432:5432
+    networks:
+     - bigdata-network
+
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse_service
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native protocol
+    environment:
+      CLICKHOUSE_DB: bober_ch_db
+      CLICKHOUSE_USER: bober
+      CLICKHOUSE_PASSWORD: bober_kurwa
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./mounts/ch:/var/lib/clickhouse
+      - ./src/clickhouse/init_scripts:/docker-entrypoint-initdb.d
+      - ./materials/mock_data:/tmp/data
+    networks:
+      - bigdata-network
+
+
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino_service
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src/trino/config/trino/etc/catalog:/etc/trino/catalog
+      - ./src/trino/scripts:/scripts
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      - JVM_XMX=2G
+    networks:
+      - bigdata-network
+
+volumes:
+  clickhouse_data:
+  postgresdata:
+
+networks:
+  bigdata-network:
+    driver: bridge
